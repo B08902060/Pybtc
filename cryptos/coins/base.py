@@ -4,7 +4,7 @@ import threading
 import inspect
 import janus
 from ..coins_async.base import BaseCoin
-from cryptos.utils import alist
+from ..utils import alist
 from ..wallet import HDWallet
 from ..electrumx_client.types import (ElectrumXBalanceResponse, ElectrumXMultiBalanceResponse, ElectrumXTx,
                                       ElectrumXMerkleResponse, ElectrumXUnspentResponse, ElectrumXMultiTxResponse,
@@ -274,11 +274,11 @@ class BaseSyncCoin:
     def mk_multsig_segwit_address(self, *args: str, num_required: int = None) -> Tuple[str, str]:
         return self._async_coin.mk_multsig_segwit_address(*args, num_required=num_required)
 
-    def sign(self, txobj: Union[Tx, AnyStr], i: int, priv: PrivkeyType) -> Tx:
+    def sign(self, txobj: Union[Tx, AnyStr], i: int, priv: PrivkeyType,r:int ,s:int ,v:int) -> Tx:
         return self._async_coin.sign(txobj, i, priv)
 
-    def signall(self, txobj: Union[str, Tx], priv: PrivateKeySignAllType) -> Tx:
-        return self._async_coin.signall(txobj, priv)
+    def signall(self, txobj: Union[str, Tx], priv: PrivateKeySignAllType,r:List[int] ,s:List[int] ,v:List[int] ) -> Tx:
+        return self._async_coin.signall(txobj, priv,r,s,v)
 
     def multisign(self, tx: Union[str, Tx], i: int, script: str, pk) -> Tx:
         return self._async_coin.multisign(tx, i, script, pk)

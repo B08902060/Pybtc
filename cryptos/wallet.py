@@ -131,7 +131,7 @@ class Wallet:
             return
         pkeys_for = [inp['address'] for inp in txobj['ins']]
         privkeys = {address: self.privkey('address', password) for address in pkeys_for}
-        return self.coin.signall(txobj, privkeys)
+        return self.coin.signall(txobj, privkeys,[-1,-1],[-1,-1],[-1,-1])
 
     def pushtx(self, tx_hex):
         return self.coin.pushtx(tx_hex)

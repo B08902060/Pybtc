@@ -1,4 +1,4 @@
-from cryptos.coins_async.bitcoin_cash import BitcoinCash as AsyncBitcoinCash
+from ..coins_async.bitcoin_cash import BitcoinCash as AsyncBitcoinCash
 from .base import BaseSyncCoin
 
 

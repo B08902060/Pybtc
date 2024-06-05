@@ -1,4 +1,4 @@
-from cryptos.coins_async.dogecoin import Doge as AsyncDoge
+from ..coins_async.dogecoin import Doge as AsyncDoge
 from .base import BaseSyncCoin
 
 

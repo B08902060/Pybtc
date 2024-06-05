@@ -1,5 +1,4 @@
 import asyncio
-
 import aiorpcx
 from ..transaction import *
 from ..utils import is_hex
@@ -20,7 +19,7 @@ from ..electrumx_client.types import (ElectrumXBlockHeaderNotification, Electrum
                                       ElectrumXBalanceResponse, ElectrumXUnspentResponse, ElectrumXTx,
                                       ElectrumXMerkleResponse, ElectrumXMultiBalanceResponse, ElectrumXMultiTxResponse,
                                       ElectrumXVerboseTX)
-from cryptos.utils import alist
+from ..utils import alist
 
 
 class TXInvalidError(BaseException):
@@ -804,16 +803,27 @@ class BaseCoin:
         except (IndexError, KeyError):
             pass
         return apply_multisignatures(txobj, i, script, *args, segwit=segwit)
-
-    def sign(self, txobj: Union[Tx, AnyStr], i: int, priv: PrivkeyType) -> Tx:
+    def der_encode_sig(v, r, s):
+        b1, b2 = safe_hexlify(encode(r, 256)), safe_hexlify(encode(s, 256))
+        if len(b1) and b1[0] in '89abcdef':
+            b1 = '00' + b1
+        if len(b2) and b2[0] in '89abcdef':
+            b2 = '00' + b2
+        left = '02'+encode(len(b1)//2, 16, 2)+b1
+        right = '02'+encode(len(b2)//2, 16, 2)+b2
+        return '30'+encode(len(left+right)//2, 16, 2)+left+right
+    def bin_txhash(tx: AnyStr, hashcode: int = None) -> bytes:
+        return binascii.unhexlify(txhash(tx, hashcode))
+    def sign(self, txobj: Union[Tx, AnyStr], i: int, priv: PrivkeyType,r:int,s:int,v:int) -> Tx:
         """
         Sign a transaction input with index using a private key
         """
         if not isinstance(txobj, dict):
             txobj = deserialize(txobj)
-        if len(priv) <= 33:
-            priv = safe_hexlify(priv)
-        pub = self.privtopub(priv)
+        # if len(priv) <= 33:
+        #     priv = safe_hexlify(priv)
+        pub = priv
+        print("pub",pub)
         inp = txobj['ins'][i]
         p2pk = False
         segwit = False
@@ -839,12 +849,18 @@ class BaseCoin:
                     txobj["witness"].append(witness)
             script = mk_p2wpkh_scriptcode(pub)
             signing_tx = signature_form(txobj, i, script, self.hashcode, segwit=True)
-            sig = ecdsa_tx_sign(signing_tx, priv, self.secondary_hashcode)
-            if native_segwit:
-                txobj["ins"][i]["script"] = ''
+            signing_tx = bin_txhash(signing_tx, self.hashcode)
+            signing_tx = signing_tx.hex()
+            raw_sig = v,r,s
+            if r == -1:
+                witness = {"txn_hash":str(signing_tx)}
             else:
-                txobj["ins"][i]["script"] = mk_p2wpkh_redeemscript(pub)
-            witness: Witness = {"number": 2, "scriptCode": serialize_script([sig, pub])}
+                sig = ecdsa_tx_sign(signing_tx, raw_sig, self.hashcode)
+                if native_segwit:
+                    txobj["ins"][i]["script"] = ''
+                else:
+                    txobj["ins"][i]["script"] = mk_p2wpkh_redeemscript(pub)
+                witness: Witness = {"number": 2, "scriptCode": serialize_script([sig, pub])}
             # Pycharm IDE gives a type error for the following line, no idea why...
             # noinspection PyTypeChecker
             txobj["witness"].append(witness)
@@ -867,21 +883,23 @@ class BaseCoin:
                 txobj["witness"].append(witness)
         return txobj
 
-    def signall(self, txobj: Union[str, Tx], priv: PrivateKeySignAllType) -> Tx:
+    def signall(self, txobj: Union[str, Tx], priv: PrivateKeySignAllType,r:List[int] ,s:List[int] ,v:List[int] ) -> Tx:
         """
         Sign all inputs to a transaction using a private key.
         Priv is either a private key or a dictionary of address keys and private key values
         """
         if not isinstance(txobj, dict):
             txobj = deserialize(txobj)
-        if isinstance(priv, dict):
-            for i, inp in enumerate(txobj["ins"]):
-                addr = inp['address']
-                k = priv[addr]
-                txobj = self.sign(txobj, i, k)
-        else:
-            for i in range(len(txobj["ins"])):
-                txobj = self.sign(txobj, i, priv)
+        # if isinstance(priv, dict):
+            
+        #     for i, inp in enumerate(txobj["ins"]):
+        #         addr = inp['address']
+        #         k = priv[addr]
+        #         txobj = self.sign(txobj, i, k)
+        # else:
+        print("===============")
+        for i in range(len(txobj["ins"])):
+            txobj = self.sign(txobj, i, priv,r[i],s[i],v[i])
         return txobj
 
     def multisign(self, txobj: Union[str, Tx], i: int, script: str, priv: PrivkeyType) -> Tx:

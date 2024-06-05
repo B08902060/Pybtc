@@ -1,4 +1,4 @@
-from cryptos.coins_async.dash import Dash as AsyncDash
+from ..coins_async.dash import Dash as AsyncDash
 from .base import BaseSyncCoin
 
 

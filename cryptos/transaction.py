@@ -8,6 +8,7 @@ from . import segwit_addr
 from . import cashaddr
 from _functools import reduce
 from .utils import is_hex
+import asyncio
 
 from typing import AnyStr, Union
 from .types import Tx, Witness
@@ -337,7 +338,7 @@ def bin_txhash(tx: AnyStr, hashcode: int = None) -> bytes:
 
 
 def ecdsa_tx_sign(tx, priv, hashcode=SIGHASH_ALL):
-    rawsig = ecdsa_raw_sign(bin_txhash(tx, hashcode), priv)
+    rawsig = priv
     return der_encode_sig(*rawsig)+encode(hashcode & 255, 16, 2)
 
 
